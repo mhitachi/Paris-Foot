@@ -1,0 +1,37 @@
+name: Agents paris foot
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+    - cron: "0 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: agents
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Lancer les agents
+        env:
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          MODE: ${{ github.event.schedule == '0 16 * * *' && 'soir' || 'matin' }}
+        run: python orchestrateur.py
+      - name: Sauvegarder
+        run: |
+          git config user.name "agents-bot"
+          git config user.email "agents-bot@users.noreply.github.com"
+          git add data/paris.db docs/data.json
+          git commit -m "Mise à jour $(date -u +'%Y-%m-%d %H:%M')" || echo "Rien de nouveau"
+          git pull --rebase || true
+          git push
