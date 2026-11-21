@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Paris Foot">
+<meta name="theme-color" content="#0c3a2a">
+<title>Paris Foot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE  : un carnet de match tenu par un entraîneur, calme et direct, en français simple
+   IDEA   : le tableau d'affichage du stade + la ligne blanche du terrain
+   PICTURE: la jauge 1/N/2 et le grand verdict coloré quand on tape une cote
+   COLOUR : vert pelouse profond, blanc craie, jaune tableau d'affichage pour l'accent ; vert/orange/rouge réservés aux verdicts
+   TYPE   : Barlow Condensed (lettrage de stade) pour titres et chiffres, Barlow pour le texte ; une colonne, barre d'onglets en bas */
+:root{color-scheme:light dark;
+--bg:light-dark(#f3f5f1,#0b1511);--card:light-dark(#ffffff,#13211b);--ink:light-dark(#14201a,#e9efe9);--mute:light-dark(#5d6b63,#9db0a5);
+--line:light-dark(#e1e7e1,#22352c);--pitch:#0c3a2a;--pitch2:#145a40;--chalk:#f4f7f2;--score:#ffd23f;
+--ok:light-dark(#137a43,#3ccf7c);--okbg:light-dark(#e3f5ea,#123222);--mid:light-dark(#b25e00,#ffae4a);--midbg:light-dark(#fff1de,#33240f);
+--ko:light-dark(#c0272d,#ff6b6b);--kobg:light-dark(#fde6e6,#3a1717);--d:#1f6feb;--n:#8b949e;--x:#d1242f}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip;padding-bottom:84px}
+h1,h2,h3,.big,.num{font-family:"Barlow Condensed",Barlow,sans-serif;letter-spacing:.2px}
+h2{font-size:22px;margin:26px 0 10px;line-height:1.1}h3{font-size:19px;margin:0 0 6px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;border-radius:12px;min-height:44px;padding:0 16px;font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--score);outline-offset:2px}
+header.top{background:linear-gradient(180deg,var(--pitch),var(--pitch2));color:var(--chalk);padding:18px max(4vw,16px) 22px;position:relative;overflow:hidden}
+header.top:after{content:"";position:absolute;right:-60px;top:-60px;width:180px;height:180px;border:2px solid rgba(255,255,255,.18);border-radius:50%}
+header.top h1{margin:0;font-size:34px;line-height:1.05}header.top p{margin:4px 0 0;opacity:.85;font-size:14px}
+main{max-width:720px;margin:auto;padding:0 max(4vw,14px)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
+.tap{cursor:pointer}.tap:active{transform:scale(.99)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap}
+.mute{color:var(--mute);font-size:14px}.small{font-size:13px}
+.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;font-weight:700;font-size:17px}
+.teams span:last-child{text-align:right}.teams i{font-style:normal;color:var(--mute);font-weight:500;font-size:14px}
+.bar{display:flex;height:26px;border-radius:8px;overflow:hidden;margin:10px 0 4px;font:700 13px "Barlow Condensed";color:#fff}
+.bar div{display:flex;align-items:center;justify-content:center;white-space:nowrap}
+.bar .d{background:var(--d)}.bar .n{background:var(--n)}.bar .x{background:var(--x)}
+.legend{display:flex;justify-content:space-between;font-size:12px;color:var(--mute)}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:13px;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--okbg);color:var(--ok)}.p-mid{background:var(--midbg);color:var(--mid)}.p-ko{background:var(--kobg);color:var(--ko)}
+.p-mute{background:var(--line);color:var(--mute)}
+.advice{border-left:5px solid var(--score)}
+.advice .what{font-size:19px;font-weight:700;margin:8px 0 2px}
+.btn{background:var(--pitch);color:var(--chalk)}.btn2{background:var(--line);color:var(--ink)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:none}
+.chips button{flex:none;background:var(--card);border:1px solid var(--line);min-height:38px;border-radius:99px;font-weight:600}
+.chips button.on{background:var(--pitch);color:var(--chalk);border-color:var(--pitch)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:5;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;color:var(--mute);text-decoration:none;font-size:12px;font-weight:600}
+nav.tabs a.on{color:var(--ink)}nav.tabs a.on svg{color:var(--pitch2)}
+nav.tabs svg{width:24px;height:24px}
+.demo{background:var(--score);color:#2a2100;padding:8px 14px;font-weight:600;font-size:14px;text-align:center}
+.verdict{border-radius:14px;padding:14px;margin-top:12px}
+.verdict .big{font-size:30px;line-height:1.05}
+.v-ok{background:var(--okbg);color:var(--ok)}.v-mid{background:var(--midbg);color:var(--mid)}.v-ko{background:var(--kobg);color:var(--ko)}
+.verdict p{color:var(--ink);margin:6px 0 0}
+label{display:block;font-weight:600;margin:12px 0 6px}
+select,input[type=number],input[type=text]{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:17px}
+input.cote{font:700 26px "Barlow Condensed";text-align:center}
+table{width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed}
+th:first-child{width:34%}td{overflow-wrap:anywhere}
+td,th{padding:8px 4px;border-bottom:1px solid var(--line);text-align:center}
+td:first-child,th:first-child{text-align:left;color:var(--mute);font-weight:500}
+th{font-size:14px}
+.form{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:2px}.form b{width:17px;height:17px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font:700 12px "Barlow Condensed";color:#fff}
+.fV{background:#1a8f4f}.fN{background:#8b949e}.fD{background:#d1242f}
+details.help{margin:0}details.help summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
+details.help summary::-webkit-details-marker{display:none}
+.q{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--mute);color:var(--mute);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+details.help[open] .q{background:var(--pitch);color:var(--chalk);border-color:var(--pitch)}
+.explain{background:var(--bg);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:15px}
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:10;overflow-y:auto;padding-bottom:40px}
+.sheet .head{position:sticky;top:0;background:var(--pitch);color:var(--chalk);padding:10px max(4vw,14px);display:flex;align-items:center;gap:10px;z-index:2}
+.sheet .head button{background:rgba(255,255,255,.15);color:var(--chalk)}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.kpi .num{font-size:28px;line-height:1;display:block}.kpi span{font-size:13px;color:var(--mute)}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.d-ok{background:var(--ok)}.d-erreur{background:var(--ko)}.d-inactif{background:var(--n)}
+.guide details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;padding:0 14px}
+.guide summary{padding:14px 0;font-weight:700;cursor:pointer;font-size:17px}
+.guide p,.guide li{font-size:16px}
+.empty{text-align:center;padding:26px 14px;color:var(--mute)}
+.alert{display:flex;gap:10px;align-items:flex-start;background:var(--midbg);color:var(--ink);border-radius:14px;padding:12px;margin:10px 0}
+.alert b{color:var(--mid)}
+.score{font:700 40px/1 "Barlow Condensed";color:var(--score);background:var(--pitch);border-radius:12px;padding:8px 14px;display:inline-block;letter-spacing:2px}
+@media (prefers-reduced-motion:no-preference){.verdict{animation:pop .25s ease-out}@keyframes pop{from{transform:scale(.96);opacity:.3}}}
+@media(max-width:380px){.teams{font-size:15px}header.top h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div id="demo"></div>
+<header class="top"><h1 id="titre">Paris Foot</h1><p id="maj">Chargement…</p></header>
+<main id="app"><p class="empty">Chargement des analyses…</p></main>
+<div id="sheet"></div>
+<nav class="tabs" id="tabs">
+  <a href="#accueil" data-v="accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg>Conseils</a>
+  <a href="#matchs" data-v="matchs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 5h-5L8 10z"/></svg>Matchs</a>
+  <a href="#paris" data-v="paris"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Mes paris</a>
+  <a href="#agents" data-v="agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01M2 13h3M19 13h3"/></svg>Agents</a>
+  <a href="#guide" data-v="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 4M12 17h.01"/></svg>Guide</a>
+</nav>
+<!--DEMO-->
+<script>
+{
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct = p => Math.round(p * 100) + "\u00a0%";
+const fmt = (x, d = 2) => Number(x).toFixed(d);
+const chf = x => (Math.round(x * 100) / 100).toFixed(2).replace(".00", "") + " CHF";
+const TZ = "Europe/Zurich";
+const jour = s => new Date(s).toLocaleDateString("fr-CH", {weekday: "long", day: "numeric", month: "long", timeZone: TZ});
+const heure = s => new Date(s).toLocaleTimeString("fr-CH", {hour: "2-digit", minute: "2-digit", timeZone: TZ});
+const quand = s => new Date(s).toLocaleDateString("fr-CH", {weekday: "short", day: "numeric", month: "short", timeZone: TZ}) + " · " + heure(s);
+
+// ---------- mémoire du téléphone ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("pf_" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("pf_" + k, JSON.stringify(v)); } catch (e) {} }
+};
+let D = null, P = {matchs: {}}, filtre = store.get("filtre", "tous");
+let reglages = store.get("reglages", {limite: 150});
+let mesParis = store.get("paris", []);
+
+// ---------- les types de paris (calculés à partir de la grille des scores) ----------
+function marches(m) {
+  const M = m.matrice, n = M.length; let tot = 0;
+  M.forEach(l => l.forEach(v => tot += v));
+  const S = f => { let s = 0; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (f(i, j)) s += M[i][j]; return s / tot; };
+  const p1 = m.proba["1"], pn = m.proba.N, p2 = m.proba["2"];
+  return [
+    {g: "Qui gagne ?", k: "1", t: "Victoire " + m.dom, p: p1},
+    {g: "Qui gagne ?", k: "N", t: "Match nul", p: pn},
+    {g: "Qui gagne ?", k: "2", t: "Victoire " + m.ext, p: p2},
+    {g: "Double chance", k: "1N", t: m.dom + " ou nul", p: p1 + pn},
+    {g: "Double chance", k: "N2", t: m.ext + " ou nul", p: pn + p2},
+    {g: "Double chance", k: "12", t: "Pas de match nul", p: p1 + p2},
+    {g: "Nombre de buts", k: "+1.5", t: "Au moins 2 buts dans le match", p: S((i, j) => i + j >= 2)},
+    {g: "Nombre de buts", k: "-1.5", t: "0 ou 1 but dans le match", p: S((i, j) => i + j < 2)},
+    {g: "Nombre de buts", k: "+2.5", t: "Au moins 3 buts dans le match (+2.5)", p: m.plus25},
+    {g: "Nombre de buts", k: "-2.5", t: "2 buts ou moins dans le match (-2.5)", p: 1 - m.plus25},
+    {g: "Nombre de buts", k: "+3.5", t: "Au moins 4 buts dans le match", p: S((i, j) => i + j >= 4)},
+    {g: "Nombre de buts", k: "-3.5", t: "3 buts ou moins dans le match", p: S((i, j) => i + j < 4)},
+    {g: "Les deux équipes marquent", k: "bo", t: "Oui, les deux marquent", p: S((i, j) => i > 0 && j > 0)},
+    {g: "Les deux équipes marquent", k: "bn", t: "Non, au moins une ne marque pas", p: S((i, j) => !(i > 0 && j > 0))},
+    {g: "Handicap", k: "h1", t: m.dom + " gagne par 2 buts ou plus", p: S((i, j) => i - j >= 2)},
+    {g: "Handicap", k: "h2", t: m.ext + " gagne par 2 buts ou plus", p: S((i, j) => j - i >= 2)},
+  ];
+}
+function gagne(k, bd, be) {
+  const t = bd + be;
+  return ({"1": bd > be, "N": bd === be, "2": be > bd, "1N": bd >= be, "N2": be >= bd, "12": bd !== be,
+    "+1.5": t >= 2, "-1.5": t < 2, "+2.5": t >= 3, "-2.5": t < 3, "+3.5": t >= 4, "-3.5": t < 4,
+    "bo": bd > 0 && be > 0, "bn": !(bd > 0 && be > 0), "h1": bd - be >= 2, "h2": be - bd >= 2})[k];
+}
+function frequence(p) {
+  if (p < .07) return "rarement";
+  if (p > .93) return "presque à chaque fois";
+  const n = Math.round(p * 10);
+  return n === 5 ? "environ 1 fois sur 2" : `environ ${n} fois sur 10`;
+}
+const coteMini = p => 1.05 / p;
+const libelleConseil = (m, c) => marches(m).find(x => x.k === c.issue)?.t || c.issue;
+
+// ---------- budget ----------
+function budget() {
+  let perdu = 0, enJeu = 0;
+  mesParis.forEach(b => {
+    const st = statutPari(b);
+    if (st === "en cours") enJeu += b.mise;
+    if (st === "gagné") perdu -= b.mise * (b.cote - 1);
+    if (st === "perdu") perdu += b.mise;
+  });
+  const reste = reglages.limite - Math.max(perdu, 0) - enJeu;
+  return {perdu, enJeu, reste};
+}
+function statutPari(b) {
+  if (b.manuel) return b.manuel;
+  const r = D?.resultats?.[b.match_id];
+  if (r && r.statut === "FINISHED" && r.bd != null) return gagne(b.k, r.bd, r.be) ? "gagné" : "perdu";
+  if (r && ["CANCELLED", "POSTPONED"].includes(r.statut)) return "annulé";
+  return "en cours";
+}
+
+// ---------- verdict quand on tape une cote ----------
+function verdict(m, mk, cote) {
+  if (!cote || cote < 1.01) return null;
+  const av = mk.p * cote - 1, b = budget();
+  let cls, titre, txt, mise = 0;
+  if (av >= 0.05) {
+    mise = av >= .12 ? (m.confiance === "forte" ? 20 : 15) : av >= .08 ? 10 : 5;
+    if (m.confiance === "faible") mise = Math.max(5, mise / 2);
+    cls = "v-ok"; titre = "Bon pari";
+    txt = `Cette cote paie plus que le vrai risque. Avantage estimé : ${Math.round(av * 100)} %.`;
+    if (m.confiance === "faible") { cls = "v-mid"; titre = "Bon prix, analyse fragile"; txt += " Mais l'analyse de ce match est fragile (voir « Attention » plus bas) : petite mise seulement."; }
+  } else if (av >= 0) {
+    cls = "v-mid"; titre = "Limite : passe ton tour";
+    txt = `La cote est à peu près juste (${Math.round(av * 100)} % d'avantage). Il te faudrait au moins ${fmt(coteMini(mk.p))}.`;
+  } else {
+    cls = "v-ko"; titre = "Mauvais prix";
+    txt = `Cette cote paie moins que le vrai risque. Pour que ça vaille le coup, il faudrait au moins ${fmt(coteMini(mk.p))}.`;
+  }
+  if (mise) {
+    if (b.reste <= 0) { mise = 0; txt += " Mais ta limite de pertes est atteinte : on attend."; }
+    else mise = Math.min(mise, Math.floor(b.reste));
+  }
+  return {cls, titre, txt, mise, av};
+}
+
+// ---------- éléments communs ----------
+function barre(p, dom, ext) {
+  return `<div class="bar" role="img" aria-label="Victoire ${esc(dom)} ${pct(p["1"])}, nul ${pct(p.N)}, victoire ${esc(ext)} ${pct(p["2"])}">
+  <div class="d" style="width:${p["1"] * 100}%">${pct(p["1"])}</div><div class="n" style="width:${p.N * 100}%">${pct(p.N)}</div><div class="x" style="width:${p["2"] * 100}%">${pct(p["2"])}</div></div>
+  <div class="legend"><span>${esc(dom)} gagne</span><span>Nul</span><span>${esc(ext)} gagne</span></div>`;
+}
+const confiance = c => ({forte: '<span class="pill p-ok">Confiance forte</span>', moyenne: '<span class="pill p-mid">Confiance moyenne</span>', faible: '<span class="pill p-ko">Confiance faible</span>'})[c] || "";
+const aide = (titre, texte, tag = "h3") => `<details class="help"><summary><${tag} style="margin:0">${titre}</${tag}><span class="q" aria-label="Explication">?</span></summary><div class="explain">${texte}</div></details>`;
+
+function carteConseil(m) {
+  const c = m.conseil;
+  return `<div class="card advice tap" data-open="${m.id}" data-k="${c.issue}">
+    <div class="row"><span class="mute">${esc(m.ligue_nom)} · ${quand(m.date)}</span>${confiance(m.confiance)}</div>
+    <div class="teams" style="margin-top:6px"><span>${esc(m.dom)}</span><i>contre</i><span>${esc(m.ext)}</span></div>
+    <div class="what">Conseil : ${esc(libelleConseil(m, c))}</div>
+    <div>Chance que ça passe : <b>${pct(c.proba)}</b> <span class="mute">(${frequence(c.proba)})</span></div>
+    <div style="margin:8px 0 10px">Parie seulement si Jouez Sport donne <b class="num" style="font-size:20px">au moins ${fmt(coteMini(c.proba))}</b></div>
+    <button class="btn" style="width:100%">Vérifier ma cote Jouez Sport</button></div>`;
+}
+
+// ---------- ÉCRAN : Conseils ----------
+function vueAccueil() {
+  const b = budget();
+  const conseils = D.matchs.filter(m => m.conseil).sort((a, b) => b.conseil.avantage - a.conseil.avantage);
+  const alertes = [];
+  D.matchs.forEach(m => {
+    const pr = P.matchs?.[m.id];
+    if (pr?.alerte) alertes.push(`<div class="alert tap" data-open="${m.id}"><span>📰</span><div><b>Info fraîche — ${esc(m.dom)} – ${esc(m.ext)}</b><br>${esc(pr.alerte)}<br><span class="small">Vérifie vite la cote sur Jouez Sport : elle n'a peut-être pas encore bougé.</span></div></div>`);
+    (m.mouvements || []).filter(x => x.variation <= -0.08).forEach(x => {
+      const qui = x.issue === "1" ? "la victoire de " + m.dom : x.issue === "2" ? "la victoire de " + m.ext : "le match nul";
+      alertes.push(`<div class="alert tap" data-open="${m.id}"><span>📉</span><div><b>Cote en chute — ${esc(m.dom)} – ${esc(m.ext)}</b><br>La cote pour ${esc(qui)} est passée de ${fmt(x.de)} à ${fmt(x.a)}. Des parieurs bien informés misent dessus : regarde la presse avant de jouer contre.</div></div>`);
+    });
+  });
+  return `
+  <div class="card" style="margin-top:14px">
+    <div class="row"><div><div class="mute">Ce que tu peux encore risquer</div><div class="num big" style="font-size:34px;color:${b.reste > 0 ? "var(--ok)" : "var(--ko)"}">${chf(Math.max(b.reste, 0))}</div></div>
+    <a href="#paris" class="pill p-mute" style="text-decoration:none">Limite ${chf(reglages.limite)}</a></div>
+    ${b.reste <= 0 ? '<p style="margin:6px 0 0"><b>Limite atteinte.</b> On fait une pause : c\'est ce qui protège ton argent.</p>' : ""}
+  </div>
+  ${alertes.length ? "<h2>À regarder vite</h2>" + alertes.join("") : ""}
+  <h2>Les belles occasions</h2>
+  ${conseils.length ? conseils.map(carteConseil).join("") : `<div class="card empty">Aucune belle occasion pour l'instant.<br>Ne pas parier, c'est souvent la meilleure décision.</div>`}
+  <p class="mute small">Ces conseils sont le résultat de 17 agents. Une bonne occasion peut perdre : ce qui compte, c'est le bon prix, pari après pari (voir le Guide).</p>`;
+}
+
+// ---------- ÉCRAN : Matchs ----------
+function vueMatchs() {
+  const ligues = [...new Set(D.matchs.map(m => m.ligue_nom))];
+  const liste = D.matchs.filter(m => filtre === "tous" || m.ligue_nom === filtre);
+  let html = `<h2>Tous les matchs des 7 prochains jours</h2><div class="chips">${["tous", ...ligues].map(l =>
+    `<button data-filtre="${esc(l)}" class="${filtre === l ? "on" : ""}">${l === "tous" ? "Tous" : esc(l)}</button>`).join("")}</div>`;
+  let j = "";
+  liste.forEach(m => {
+    const dj = jour(m.date);
+    if (dj !== j) { j = dj; html += `<h3 style="margin:18px 0 6px;text-transform:capitalize">${esc(dj)}</h3>`; }
+    html += `<div class="card tap" data-open="${m.id}"><div class="row"><span class="mute">${heure(m.date)} · ${esc(m.ligue_nom)}</span>
+      ${m.conseil ? '<span class="pill p-ok">Conseil</span>' : ""}</div>
+      <div class="teams" style="margin-top:4px"><span>${esc(m.dom)}</span><i>–</i><span>${esc(m.ext)}</span></div>${barre(m.proba, m.dom, m.ext)}</div>`;
+  });
+  return html + (liste.length ? "" : `<div class="card empty">Aucun match.</div>`);
+}
+
+// ---------- FICHE MATCH ----------
+function ouvrirMatch(id, k) {
+  const m = D.matchs.find(x => String(x.id) === String(id));
+  if (!m) return;
+  const mks = marches(m), pr = P.matchs?.[m.id], c = m.contexte;
+  const fav = ["1", "2"].map(i => [i, m.proba[i]]).sort((a, b) => b[1] - a[1])[0];
+  const favNom = fav[0] === "1" ? m.dom : m.ext;
+  let best = [0, 0], tot = 0; m.matrice.forEach((l, i) => l.forEach((v, j) => { tot += v; if (v > (m.matrice[best[0]][best[1]])) best = [i, j]; }));
+  const phrase = fav[1] >= .55 ? `<b>${esc(favNom)}</b> est nettement favori : il gagne ${frequence(fav[1])}.`
+    : fav[1] >= .42 ? `<b>${esc(favNom)}</b> est légèrement favori, mais rien n'est joué.` : `Match très serré : aucune équipe ne se détache vraiment.`;
+  const groupes = [...new Set(mks.map(x => x.g))];
+  const sel = k || (m.conseil?.issue) || "1";
+  const L = (lbl, a, b, expl) => `<tr><td>${lbl}${expl ? "" : ""}</td><td>${a ?? "–"}</td><td>${b ?? "–"}</td></tr>`;
+  const forme = f => f ? `<span class="form">${[...f].map(x => `<b class="f${x}">${x}</b>`).join("")}</span>` : "–";
+  const fat = f => f.repos == null ? "–" : `${f.repos} j${f.europe ? " ⚠️" : ""}`;
+  const pf = (e, key) => e.profil?.[key];
+  const presseEquipe = (e, nom) => e ? `<div style="margin-top:10px"><b>${esc(nom)}</b>
+      ${e.absents?.length ? `<div>Absents : ${e.absents.map(esc).join(", ")}</div>` : "<div class='mute'>Aucun absent signalé</div>"}
+      ${e.compo ? `<div class="small">Compo probable : ${esc(e.compo)}</div>` : ""}
+      ${(e.infos || []).map(i => `<div class="small">• ${esc(i)}</div>`).join("")}</div>` : "";
+  const nomsModeles = {marche: "Les bookmakers", buts: "Modèle buts", xg: "Modèle occasions (xG)", elo: "Classement Elo"};
+  $("#sheet").innerHTML = `<div class="sheet" role="dialog" aria-label="Fiche du match">
+   <div class="head"><button id="fermer" aria-label="Retour">← Retour</button><span class="small">${esc(m.ligue_nom)} · ${quand(m.date)}</span></div>
+   <main>
+    <div class="card" style="margin-top:14px">
+      <div class="teams" style="font-size:20px"><span>${esc(m.dom)}</span><i>contre</i><span>${esc(m.ext)}</span></div>
+      ${barre(m.proba, m.dom, m.ext)}
+      <p style="margin:10px 0 4px">${phrase}</p>
+      <div class="row" style="margin-top:8px"><div><div class="mute">Score le plus probable</div><span class="score">${best[0]} – ${best[1]}</span></div>
+      <div style="text-align:right">${confiance(m.confiance)}${m.buts_attendus ? `<div class="mute small" style="margin-top:6px">Buts attendus : ${fmt(m.buts_attendus[0], 1)} – ${fmt(m.buts_attendus[1], 1)}</div>` : ""}</div></div>
+    </div>
+
+    <div class="card" id="verif">
+      ${aide("Vérifier une cote Jouez Sport", "Choisis le pari que tu vois sur Jouez Sport, tape la cote affichée. L'appli compare avec la vraie probabilité calculée par les agents et te dit si le prix est bon.")}
+      <label for="mk">Le pari</label>
+      <select id="mk">${groupes.map(g => `<optgroup label="${esc(g)}">${mks.filter(x => x.g === g).map(x =>
+        `<option value="${x.k}" ${x.k === sel ? "selected" : ""}>${esc(x.t)} — ${pct(x.p)}</option>`).join("")}</optgroup>`).join("")}</select>
+      <div id="infomk" class="mute small" style="margin-top:6px"></div>
+      <label for="cote">La cote affichée sur Jouez Sport</label>
+      <input id="cote" class="cote" type="number" inputmode="decimal" step="0.01" min="1" placeholder="ex : 2.10">
+      <div id="res"></div>
+    </div>
+
+    ${pr ? `<div class="card">${aide("La presse du jour", "Chaque matin, un agent lit la presse locale des deux équipes : blessés, suspendus, composition probable, ambiance, déclarations. " + (P.maj ? "Dernière lecture : " + quand(P.maj) + "." : ""))}
+      ${pr.resume ? `<p style="margin:8px 0 0">${esc(pr.resume)}</p>` : ""}
+      ${presseEquipe(pr.dom, m.dom)}${presseEquipe(pr.ext, m.ext)}
+      ${pr.arbitre ? `<div style="margin-top:10px"><b>Arbitre :</b> ${esc(pr.arbitre.nom || "")}${pr.arbitre.profil ? ` — ${esc(pr.arbitre.profil)}` : ""}</div>` : ""}</div>`
+      : `<div class="card mute small">La presse est lue chaque matin pour les matchs du jour qui ont un conseil.</div>`}
+
+    <div class="card">${aide("Les deux équipes face à face", "Forme : V = victoire, N = nul, D = défaite, sur les 6 derniers matchs, à domicile pour l'équipe qui reçoit et à l'extérieur pour l'autre (le plus récent à droite). Repos : jours depuis le dernier match (⚠️ = a joué la Ligue des champions cette semaine). Force Elo : note de force du club, 1500 = moyen, 1800+ = très fort.")}
+      <table style="margin-top:6px"><tr><th></th><th>${esc(m.dom)}</th><th>${esc(m.ext)}</th></tr>
+      ${L("Classement", c.dom.rang ? c.dom.rang + "e · " + c.dom.points + " pts" : null, c.ext.rang ? c.ext.rang + "e · " + c.ext.points + " pts" : null)}
+      ${L("Enjeu", esc(c.dom.enjeu), esc(c.ext.enjeu))}
+      ${L("Forme", forme(c.dom.forme), forme(c.ext.forme))}
+      ${L("Repos", fat(c.dom.fatigue), fat(c.ext.fatigue))}
+      ${L("Matchs en 3 sem.", c.dom.fatigue.matchs_21j, c.ext.fatigue.matchs_21j)}
+      ${L("Force Elo", c.dom.elo, c.ext.elo)}
+      ${L("Buts marqués / match", pf(c.dom, "buts_pour"), pf(c.ext, "buts_pour"))}
+      ${L("Buts encaissés / match", pf(c.dom, "buts_contre"), pf(c.ext, "buts_contre"))}
+      ${L("Tirs / match", pf(c.dom, "tirs"), pf(c.ext, "tirs"))}
+      ${L("Tirs cadrés / match", pf(c.dom, "cadres"), pf(c.ext, "cadres"))}
+      ${L("Corners / match", pf(c.dom, "corners"), pf(c.ext, "corners"))}
+      ${L("Cartons / match", pf(c.dom, "cartons"), pf(c.ext, "cartons"))}</table></div>
+
+    <div class="card">${aide("L'avis des 4 analystes", "Quatre analystes indépendants donnent leur avis. Le juge les mélange : les bookmakers comptent le plus (ils sont très bien informés), nos modèles servent à repérer leurs erreurs. Quand tout le monde est d'accord, l'analyse est solide.")}
+      <table style="margin-top:6px"><tr><th></th><th>${esc(m.dom)}</th><th>Nul</th><th>${esc(m.ext)}</th></tr>
+      ${Object.entries(m.modeles).map(([k, v]) => `<tr><td>${nomsModeles[k] || k}</td><td>${pct(v["1"])}</td><td>${pct(v.N)}</td><td>${pct(v["2"])}</td></tr>`).join("")}
+      <tr><td><b style="color:var(--ink)">Verdict du juge</b></td><td><b>${pct(m.proba["1"])}</b></td><td><b>${pct(m.proba.N)}</b></td><td><b>${pct(m.proba["2"])}</b></td></tr></table></div>
+
+    ${m.pieges.length ? `<div class="card">${aide("⚠️ Attention", "Le détecteur de pièges signale ce qui peut fausser l'analyse. Plus il y a de points ici, plus il faut miser petit, ou pas du tout.")}
+      ${m.pieges.map(x => `<p style="margin:8px 0 0">• ${esc(x)}</p>`).join("")}</div>` : ""}
+
+    ${m.mouvements?.length ? `<div class="card">${aide("Mouvement des cotes", "Comment les cotes ont bougé depuis le premier relevé. Une cote qui baisse fort = beaucoup d'argent misé dessus, souvent par des gens bien informés.")}
+      <table style="margin-top:6px"><tr><th></th><th>Avant</th><th>Maintenant</th><th>Variation</th></tr>
+      ${m.mouvements.map(x => `<tr><td>${x.issue === "1" ? esc(m.dom) : x.issue === "2" ? esc(m.ext) : "Nul"}</td><td>${fmt(x.de)}</td><td>${fmt(x.a)}</td><td style="color:${x.variation <= -0.08 ? "var(--ko)" : "inherit"}">${x.variation > 0 ? "+" : ""}${Math.round(x.variation * 100)} %</td></tr>`).join("")}</table></div>` : ""}
+   </main></div>`;
+  document.body.style.overflow = "hidden";
+  $("#fermer").onclick = fermer;
+  const maj = () => {
+    const mk = mks.find(x => x.k === $("#mk").value);
+    const best = m.meilleures_cotes?.[mk.k];
+    $("#infomk").innerHTML = `Chance : <b>${pct(mk.p)}</b> (${frequence(mk.p)}) · il faut une cote d'au moins <b>${fmt(coteMini(mk.p))}</b>` +
+      (best ? ` · meilleure cote ailleurs : ${fmt(best)}` : "");
+    const v = verdict(m, mk, parseFloat(String($("#cote").value).replace(",", ".")));
+    $("#res").innerHTML = v ? `<div class="verdict ${v.cls}"><div class="big">${v.titre}</div><p>${v.txt}</p>
+      ${v.mise ? `<p><b>Mise conseillée : ${chf(v.mise)}</b></p><button class="btn" id="jaiparie" style="width:100%;margin-top:10px">J'ai parié</button>` : ""}</div>` : "";
+    const bp = $("#jaiparie");
+    if (bp) bp.onclick = () => {
+      $("#res").insertAdjacentHTML("beforeend", `<div class="card" id="confirm"><label for="mise">Combien as-tu misé ? (CHF)</label>
+        <input id="mise" type="number" inputmode="decimal" value="${v.mise}"><button class="btn" id="ok" style="width:100%;margin-top:10px">Enregistrer dans Mes paris</button></div>`);
+      bp.remove();
+      $("#ok").onclick = () => {
+        const mise = parseFloat($("#mise").value) || v.mise;
+        mesParis.unshift({id: Date.now(), match_id: m.id, match: m.dom + " – " + m.ext, date: m.date, k: mk.k, t: mk.t,
+          cote: parseFloat(String($("#cote").value).replace(",", ".")), mise});
+        store.set("paris", mesParis);
+        $("#confirm").innerHTML = `<b style="color:var(--ok)">✓ Pari enregistré.</b> Il se mettra à jour tout seul après le match (onglet Mes paris).`;
+      };
+    };
+  };
+  $("#mk").onchange = maj; $("#cote").oninput = maj; maj();
+  if (k) setTimeout(() => $("#verif").scrollIntoView({behavior: "smooth"}), 50);
+}
+function fermer() { $("#sheet").innerHTML = ""; document.body.style.overflow = ""; }
+
+// ---------- ÉCRAN : Mes paris ----------
+function vueParis() {
+  const b = budget();
+  let gagne_ = 0, nbG = 0, nbP = 0, clvN = 0, clvB = 0;
+  mesParis.forEach(p => {
+    const st = statutPari(p);
+    if (st === "gagné") { gagne_ += p.mise * (p.cote - 1); nbG++; }
+    if (st === "perdu") { gagne_ -= p.mise; nbP++; }
+    const clo = D.resultats?.[p.match_id]?.cloture?.[p.k];
+    if (clo && st !== "en cours") { clvN++; if (p.cote > clo) clvB++; }
+  });
+  const ligne = p => {
+    const st = statutPari(p), clo = D.resultats?.[p.match_id]?.cloture?.[p.k], r = D.resultats?.[p.match_id];
+    const pill = {"gagné": `<span class="pill p-ok">Gagné +${chf(p.mise * (p.cote - 1))}</span>`, "perdu": `<span class="pill p-ko">Perdu −${chf(p.mise)}</span>`,
+      "annulé": '<span class="pill p-mute">Annulé</span>', "en cours": '<span class="pill p-mid">En cours</span>'}[st];
+    return `<div class="card"><div class="row"><b>${esc(p.match)}</b>${pill}</div>
+      <div>${esc(p.t)} · cote ${fmt(p.cote)} · mise ${chf(p.mise)}</div>
+      <div class="mute small">${quand(p.date)}${r?.bd != null && r.statut === "FINISHED" ? ` · score final ${r.bd}–${r.be}` : ""}</div>
+      ${clo ? `<div class="small" style="margin-top:4px">${p.cote > clo ? `✅ Bien joué : tu as pris ${fmt(p.cote)}, la cote a fini à ${fmt(clo)}` : `❌ La cote a fini à ${fmt(clo)}, tu aurais pu avoir mieux`}</div>` : ""}
+      <div class="row" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
+        ${st === "en cours" ? `<button class="btn2" data-man="${p.id}" data-st="gagné">Gagné</button><button class="btn2" data-man="${p.id}" data-st="perdu">Perdu</button>` : ""}
+        <button class="btn2" data-del="${p.id}">Supprimer</button></div></div>`;
+  };
+  return `<h2>Mes paris</h2>
+  <div class="kpis"><div class="kpi"><span class="num" style="color:${gagne_ >= 0 ? "var(--ok)" : "var(--ko)"}">${gagne_ >= 0 ? "+" : "−"}${chf(Math.abs(gagne_))}</span><span>résultat total</span></div>
+  <div class="kpi"><span class="num">${nbG} / ${nbG + nbP}</span><span>paris gagnés</span></div>
+  <div class="kpi"><span class="num">${chf(Math.max(b.reste, 0))}</span><span>encore risquable</span></div>
+  <div class="kpi"><span class="num">${clvN ? clvB + " / " + clvN : "–"}</span><span>cote de clôture battue</span></div></div>
+  <div class="card">${aide("Ma limite de pertes", "C'est le maximum que tu acceptes de perdre. L'appli enlève les paris perdus et l'argent en jeu. Quand il ne reste plus rien, elle te conseille de faire une pause.")}
+    <label for="limite">Limite (CHF)</label><input id="limite" type="number" inputmode="numeric" value="${reglages.limite}"></div>
+  ${aide("C'est quoi « cote de clôture battue » ?", "La cote de clôture, c'est la dernière cote juste avant le match, la plus juste de toutes. Si tu as pris une cote plus haute, tu as acheté au bon prix, même si le pari perd. Si tu la bats souvent, tu es gagnant sur la durée.", "h2")}
+  ${mesParis.length ? mesParis.map(ligne).join("") : `<div class="card empty">Aucun pari enregistré.<br>Quand tu paries, tape « J'ai parié » sur la fiche du match.</div>`}`;
+}
+
+// ---------- ÉCRAN : Agents ----------
+function vueAgents() {
+  const t = D.testeur, r = D.robot || {};
+  const agents = [...D.agents, {nom: "Presse (Claude)", role: "Lit chaque matin la presse locale des matchs du jour : absents, compos, arbitre, ambiance.",
+    etat: P.maj ? "ok" : "inactif", detail: P.maj ? Object.keys(P.matchs || {}).length + " matchs lus" : "Pas encore lancé", maj: P.maj}];
+  const ok = agents.filter(a => a.etat === "ok").length;
+  return `<h2>Tes ${agents.length} agents</h2>
+  <div class="kpis"><div class="kpi"><span class="num" style="color:var(--ok)">${ok}</span><span>agents au travail</span></div>
+  <div class="kpi"><span class="num">${agents.length - ok}</span><span>en pause ou en panne</span></div></div>
+  ${t ? `<div class="card">${aide("L'examen du système (le testeur)", "Le testeur rejoue le système sur les saisons passées, avec les vraies cotes de l'époque, comme si tu avais suivi tous les conseils. C'est le juge de paix : il dit si le système aurait gagné ou perdu.")}
+    <p style="margin:8px 0">${esc(t.verdict)}</p>
+    ${t.global?.nb ? `<table><tr><th>Championnat</th><th>Paris</th><th>Rendement</th></tr>${(t.par_ligue || []).map(l => `<tr><td>${esc(l.nom)}</td><td>${l.nb}</td><td style="color:${l.roi >= 0 ? "var(--ok)" : "var(--ko)"}">${l.roi >= 0 ? "+" : ""}${(l.roi * 100).toFixed(1)} %</td></tr>`).join("")}</table>
+    <p class="mute small">Rendement = gain ou perte pour 100 CHF misés. Période : ${esc(t.periode)}. Mis à jour le ${esc(t.date)}.</p>` : ""}</div>` : ""}
+  <div class="card">${aide("Le robot qui teste les conseils", "Chaque conseil est joué par un robot avec 10 CHF virtuels. Ça permet de voir si les conseils marchent vraiment, sans risquer ton argent.")}
+    <p style="margin:8px 0 0">${r.nb ? `${r.nb} pari${r.nb > 1 ? "s" : ""} test, ${r.gagnes} gagné${r.gagnes > 1 ? "s" : ""}. Résultat : <b>${r.profit >= 0 ? "+" : ""}${chf(r.profit)}</b> (${(r.roi * 100).toFixed(1)} %).` : "Pas encore de pari test terminé."}
+    ${r.clv_nb ? `<br>Cote de clôture battue : ${r.clv_battu} fois sur ${r.clv_nb}.` : ""}</p>
+    ${r.nb < 100 ? `<p class="mute small">Il faut environ 100 paris avant que ce résultat veuille vraiment dire quelque chose.</p>` : ""}</div>
+  ${agents.map(a => `<div class="card"><div class="row" style="justify-content:flex-start"><span class="dot d-${a.etat}" aria-hidden="true"></span><b>${esc(a.nom)}</b>
+    <span class="mute small" style="margin-left:auto">${a.etat === "ok" ? "OK" : a.etat === "erreur" ? "En panne" : "En pause"}</span></div>
+    <div class="small">${esc(a.role)}</div><div class="mute small">${esc(a.detail)}${a.maj ? " · " + quand(a.maj) : ""}</div></div>`).join("")}`;
+}
+
+// ---------- ÉCRAN : Guide ----------
+function vueGuide() {
+  return `<h2>Le guide, de A à Z</h2><div class="guide">
+  <details open><summary>1. À quoi sert cette appli ?</summary><p>Elle analyse chaque jour les matchs de 6 championnats (Premier League, Liga, Serie A, Bundesliga, Ligue 1, Eredivisie) grâce à 17 agents automatiques. Elle te dit quand une cote vaut vraiment le coup, et quand il vaut mieux passer.</p></details>
+  <details><summary>2. Comment l'utiliser en 3 gestes</summary><ol><li>Ouvre l'onglet <b>Conseils</b> : ce sont les belles occasions du jour.</li><li>Ouvre Jouez Sport, trouve le même pari et regarde la cote.</li><li>Dans l'appli, tape « Vérifier ma cote », entre la cote de Jouez Sport. <b>Vert</b> = vas-y, <b>orange</b> = passe ton tour, <b>rouge</b> = mauvais prix. Si tu paries, tape « J'ai parié ».</li></ol></details>
+  <details><summary>3. C'est quoi une cote ?</summary><p>C'est ce que le bookmaker te paie. Cote 2.00 : tu mises 10 CHF, tu récupères 20 CHF si tu gagnes (10 de mise + 10 de gain). Plus la cote est haute, plus le bookmaker pense que c'est improbable.</p></details>
+  <details><summary>4. Pourquoi l'appli parle de « bon prix » ?</summary><p>Les agents calculent la vraie chance de chaque résultat. Si un résultat arrive 1 fois sur 2, la cote juste est 2.00. Si Jouez Sport donne 2.30, il te paie trop : c'est un bon prix. S'il donne 1.80, il te paie trop peu : on passe.</p><p>L'appli demande toujours un peu plus que la cote juste (5 %), pour avoir une marge de sécurité.</p></details>
+  <details><summary>5. Tu peux perdre un bon pari, et c'est normal</summary><p>Pile ou face payé 2.20 au lieu de 2.00 : tu perds la moitié du temps, mais sur 100 lancers à 10 CHF, tu finis à +100 CHF. Un pari perdu ne veut pas dire que le conseil était mauvais. On juge le système sur 50 à 100 paris, jamais sur un week-end.</p></details>
+  <details><summary>6. La cote de clôture</summary><p>C'est la dernière cote avant le coup d'envoi, quand toutes les infos sont connues. Si tu avais pris mieux, tu as acheté au bon prix. L'appli te le dit pour chaque pari dans « Mes paris ». La battre souvent, c'est le signe numéro un d'un parieur gagnant.</p></details>
+  <details><summary>7. Les types de paris</summary><ul><li><b>Qui gagne ?</b> : victoire de l'un, de l'autre, ou nul.</li><li><b>Double chance</b> : tu gagnes avec 2 résultats sur 3 (ex : victoire ou nul). Cote plus basse, plus sûr.</li><li><b>Nombre de buts</b> : « +2.5 » = au moins 3 buts dans le match. « −2.5 » = 2 buts ou moins.</li><li><b>Les deux équipes marquent</b> : oui si chaque équipe marque au moins un but.</li><li><b>Handicap</b> : l'équipe doit gagner par 2 buts d'écart ou plus.</li></ul></details>
+  <details><summary>8. Les règles d'or</summary><ul><li><b>Pas de combinés.</b> Chaque match ajouté multiplie la marge du bookmaker contre toi.</li><li><b>Mise conseillée : 5 à 20 CHF</b>, selon la qualité de l'occasion.</li><li><b>Confiance faible = petite mise ou rien.</b></li><li><b>Respecte ta limite.</b> Quand elle est atteinte, l'appli te dit d'attendre.</li><li><b>Ne parie jamais pour te refaire</b> après une défaite.</li></ul></details>
+  <details><summary>9. Que font les agents, et quand ?</summary><p>À 7h, les agents relèvent les matchs, les cotes, les notes Elo, les statistiques, puis le juge rend son verdict. À 9h, l'agent presse lit les journaux locaux pour les matchs du jour. À 17h, nouveau relevé des cotes pour repérer les mouvements. Le lundi, le testeur refait son examen. Tout se voit dans l'onglet <b>Agents</b>.</p></details>
+  <details><summary>10. Installer l'appli sur l'écran d'accueil</summary><p><b>iPhone</b> : ouvre l'appli dans Safari, touche le bouton Partager, puis « Sur l'écran d'accueil ».<br><b>Android</b> : ouvre-la dans Chrome, menu ⋮, puis « Ajouter à l'écran d'accueil ».</p></details>
+  <details><summary>11. Et si j'ai besoin d'aide ?</summary><p>Demande à Claude dans la conversation du projet « Paris foot ». Tu peux aussi lui demander une analyse détaillée d'un match précis.</p></details>
+  </div>`;
+}
+
+// ---------- navigation ----------
+const VUES = {accueil: vueAccueil, matchs: vueMatchs, paris: vueParis, agents: vueAgents, guide: vueGuide};
+function rendre() {
+  const h = location.hash.slice(1);
+  if (h.startsWith("match-")) { const id = h.slice(6); history.replaceState(null, "", "#matchs"); rendre(); if (D) ouvrirMatch(id); return; }
+  const v = VUES[h] ? h : "accueil";
+  document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.dataset.v === v));
+  $("#titre").textContent = {accueil: "Les conseils du jour", matchs: "Les matchs", paris: "Mes paris", agents: "Les agents", guide: "Le guide"}[v];
+  if (!D) { $("#app").innerHTML = `<div class="card empty" style="margin-top:14px">Les analyses arrivent après le premier passage des agents (chaque jour à 7h).</div>${v === "guide" ? vueGuide() : ""}`; return; }
+  $("#app").innerHTML = VUES[v]();
+  if (v === "paris") {
+    const li = $("#limite");
+    if (li) li.onchange = () => { reglages.limite = Math.max(0, parseFloat(li.value) || 0); store.set("reglages", reglages); rendre(); };
+  }
+}
+document.addEventListener("click", e => {
+  const o = e.target.closest("[data-open]");
+  if (o && !e.target.closest("#sheet")) { ouvrirMatch(o.dataset.open, o.dataset.k); return; }
+  const f = e.target.closest("[data-filtre]");
+  if (f) { filtre = f.dataset.filtre; store.set("filtre", filtre); rendre(); return; }
+  const man = e.target.closest("[data-man]");
+  if (man) { const p = mesParis.find(x => String(x.id) === man.dataset.man); if (p) { p.manuel = man.dataset.st; store.set("paris", mesParis); rendre(); } return; }
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    if (del.dataset.sure) { mesParis = mesParis.filter(x => String(x.id) !== del.dataset.del); store.set("paris", mesParis); rendre(); }
+    else { del.dataset.sure = "1"; del.textContent = "Confirmer la suppression"; del.style.background = "var(--kobg)"; del.style.color = "var(--ko)"; }
+  }
+});
+addEventListener("hashchange", () => { fermer(); rendre(); });
+addEventListener("keydown", e => { if (e.key === "Escape") fermer(); });
+
+async function charger() {
+  try { const r = await fetch("data.json?" + Date.now()); if (!r.ok) throw 0; D = await r.json(); }
+  catch (e) { D = window.DEMO_DATA || null; }
+  try { const r = await fetch("presse.json?" + Date.now()); if (!r.ok) throw 0; P = await r.json(); }
+  catch (e) { P = window.DEMO_PRESSE || {matchs: {}}; }
+  if (D) {
+    $("#maj").textContent = "Analyses du " + new Date(D.maj).toLocaleString("fr-CH", {weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: TZ});
+    if (D.demo) $("#demo").innerHTML = '<div class="demo">Démonstration : équipes et chiffres fictifs. Ne parie pas dessus.</div>';
+  } else $("#maj").textContent = "En attente des premières analyses";
+  rendre();
+}
+charger();
+}
+</script>
+</body>
+</html>
