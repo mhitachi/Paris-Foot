@@ -3,6 +3,7 @@
 2) Les probabilités 1/N/2 que ClubElo calcule pour les matchs à venir."""
 import csv
 import io
+import time
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -15,9 +16,16 @@ NOM = "Elo"
 
 
 def lire_csv(url):
-    r = requests.get(url, timeout=30)
-    r.raise_for_status()
-    return list(csv.DictReader(io.StringIO(r.text)))
+    """3 essais espacés : le site ClubElo est parfois surchargé (erreur 502)."""
+    for essai in range(3):
+        try:
+            r = requests.get(url, timeout=30)
+            r.raise_for_status()
+            return list(csv.DictReader(io.StringIO(r.text)))
+        except requests.RequestException:
+            if essai == 2:
+                raise
+            time.sleep(20)
 
 
 def executer(con, log):

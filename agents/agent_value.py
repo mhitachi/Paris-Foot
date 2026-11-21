@@ -1,29 +1,41 @@
 """AGENT Conseils (+ paris test du robot).
-Un conseil apparaît quand le juge voit une issue plus probable que ce que paie la meilleure cote du marché.
+Un conseil apparaît quand un bookmaker classique paie nettement plus que le vrai prix de Pinnacle :
+il est "en retard", et Jouez Sport l'est peut-être aussi.
 Le robot joue chaque conseil avec 10 CHF virtuels : c'est sa façon de prouver (ou non) qu'il est bon."""
 from datetime import datetime, timezone
 
 import config
-from agents.agent_juge import proba_marche
 from agents.base_donnees import etat, maintenant
 
 
+def meilleures_cotes(con, match_id, marche):
+    """Meilleure cote par issue chez les bookmakers classiques (sans Pinnacle ni bourses d'échange)."""
+    best = {}
+    for r in con.execute("SELECT bookmaker, issue, cote FROM cotes WHERE match_id=? AND marche=?", (match_id, marche)):
+        if r["bookmaker"] == "pinnacle" or r["bookmaker"].startswith(config.BOURSES):
+            continue
+        if r["cote"] > best.get(r["issue"], (0, ""))[0]:
+            best[r["issue"]] = (r["cote"], r["bookmaker"])
+    return best
+
+
 def opportunites(con, v):
-    """Toutes les issues 1/N/2 et +/-2.5 d'un match, avec avantage par rapport à la meilleure cote."""
+    """Toutes les issues 1/N/2 et +/-2.5 d'un match, avec avantage par rapport au vrai prix."""
     out = []
-    _, best = proba_marche(con, v["match_id"])
-    if best:
+    best = {k: c for k, (c, _) in meilleures_cotes(con, v["match_id"], "1X2").items()}
+    if len(best) == 3:
         for i, p in (("1", v["p1"]), ("N", v["pn"]), ("2", v["p2"])):
             out.append({"marche": "1X2", "issue": i, "proba": p, "cote": best[i], "avantage": p * best[i] - 1})
-    _, best = proba_marche(con, v["match_id"], "OU25")
-    if best:
+    best = {k: c for k, (c, _) in meilleures_cotes(con, v["match_id"], "OU25").items()}
+    if len(best) == 2:
         for i, p in (("+2.5", v["p_over25"]), ("-2.5", 1 - v["p_over25"])):
             out.append({"marche": "OU25", "issue": i, "proba": p, "cote": best[i], "avantage": p * best[i] - 1})
     return out
 
 
 def conseil(con, v):
-    if v["confiance"] == "faible":
+    # pas de conseil sans le prix de Pinnacle (la référence), ni si l'analyse est fragile
+    if v["confiance"] == "faible" or "pinnacle" not in (v["modeles"] or ""):
         return None
     ops = [o for o in opportunites(con, v)
            if o["avantage"] >= config.AVANTAGE_MIN and config.COTE_MIN <= o["cote"] <= config.COTE_MAX]
@@ -50,4 +62,4 @@ def executer(con, log):
     con.commit()
     total = sum(len(v) for v in par_jour.values())
     log(f"  {total} conseils, {nouveaux} nouveaux paris test")
-    etat(con, "Conseils", "ok", f"{total} belles occasions repérées sur les 7 prochains jours")
+    etat(con, "Conseils", "ok", f"{total} bookmakers en retard sur Pinnacle repérés (7 prochains jours)")

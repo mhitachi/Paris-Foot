@@ -1,5 +1,6 @@
 """AGENT Juge + Détecteur de pièges + Mouvements de cotes.
-Le juge écoute les 4 analystes (marché, buts, xG, Elo), les pondère et rend une probabilité finale.
+Le juge fixe le VRAI PRIX de chaque pari à partir des cotes de Pinnacle, marge retirée
+(à défaut : la moyenne des bookmakers). Les analystes (buts, xG, Elo) restent affichés pour information.
 Le détecteur de pièges signale tout ce qui rend l'analyse fragile.
 L'agent mouvements repère les cotes qui chutent (souvent le signe d'une info qui circule)."""
 import json
@@ -29,6 +30,17 @@ def proba_marche(con, match_id, marche="1X2"):
     return {i: brut[i] / tot for i in issues}, meilleures
 
 
+def proba_pinnacle(con, match_id, marche="1X2"):
+    issues = ISSUES if marche == "1X2" else ["+2.5", "-2.5"]
+    c = {r["issue"]: r["cote"] for r in con.execute(
+        "SELECT issue, cote FROM cotes WHERE match_id=? AND marche=? AND bookmaker='pinnacle'", (match_id, marche))}
+    if not all(i in c for i in issues):
+        return None
+    inv = {i: 1 / c[i] for i in issues}
+    t = sum(inv.values())
+    return {i: inv[i] / t for i in issues}
+
+
 def mouvements(con, match_id):
     """Compare la première et la dernière photo des cotes 1/N/2."""
     out = []
@@ -41,16 +53,22 @@ def mouvements(con, match_id):
     return out
 
 
-def ajuster_matrice(M, p):
-    """Recale la grille des scores pour qu'elle colle aux probabilités 1/N/2 du juge."""
-    M = np.array(M)
+def ajuster_matrice(M, p, p_over=None):
+    """Recale la grille des scores pour qu'elle colle au vrai prix (1/N/2 et plus/moins 2.5 buts).
+    Ainsi les autres paris (double chance, les deux marquent, handicap...) héritent du prix du marché."""
+    M = np.array(M, dtype=float)
+    M /= M.sum()
     X, Y = np.indices(M.shape)
-    zones = {"1": X > Y, "N": X == Y, "2": X < Y}
-    for i, z in zones.items():
-        s = M[z].sum()
-        if s > 0:
-            M[z] *= p[i] / s
-    return M / M.sum()
+    zones = [(X > Y, p["1"]), (X == Y, p["N"]), (X < Y, p["2"])]
+    if p_over is not None:
+        zones2 = [(X + Y >= 3, p_over), (X + Y < 3, 1 - p_over)]
+    for _ in range(30 if p_over is not None else 1):
+        for z, cible in zones + (zones2 if p_over is not None else []):
+            s = M[z].sum()
+            if s > 0:
+                M[z] *= cible / s
+            M /= M.sum()
+    return M
 
 
 def executer(con, log):
@@ -76,14 +94,22 @@ def executer(con, log):
         pm, _ = proba_marche(con, m["id"])
         if pm:
             modeles["marche"] = pm
-        poids = {k: config.POIDS[k] for k in modeles}
-        tot = sum(poids.values())
-        p = {i: sum(poids[k] * modeles[k][i] for k in modeles) / tot for i in ISSUES}
+        pin = proba_pinnacle(con, m["id"])
+        if pin:
+            modeles["pinnacle"] = pin
+        if pin:                      # 1) Pinnacle = le vrai prix
+            p = dict(pin)
+        elif pm:                     # 2) sinon la moyenne des bookmakers
+            p = dict(pm)
+        else:                        # 3) en dernier recours, nos modèles
+            poids = {k: config.POIDS[k] for k in modeles if k in config.POIDS}
+            tot = sum(poids.values())
+            p = {i: sum(poids[k] * modeles[k][i] for k in poids) / tot for i in ISSUES}
 
-        # plus/moins 2.5 : moitié modèles (buts/xG), moitié marché
-        p_over_mod = np.mean([preds[k]["p_over25"] for k in ("buts", "xg") if k in preds])
+        pino = proba_pinnacle(con, m["id"], "OU25")
         pmo, _ = proba_marche(con, m["id"], "OU25")
-        p_over = 0.5 * p_over_mod + 0.5 * pmo["+2.5"] if pmo else p_over_mod
+        p_over_mod = np.mean([preds[k]["p_over25"] for k in ("buts", "xg") if k in preds])
+        p_over = pino["+2.5"] if pino else pmo["+2.5"] if pmo else p_over_mod
 
         # pièges
         ctx = agent_contexte.contexte_match(con, m, tables)
@@ -101,24 +127,26 @@ def executer(con, log):
                 pieges.append(f"{nom} a joué en Ligue des champions cette semaine.")
             if c["enjeu"] == "Plus rien à jouer":
                 pieges.append(f"{nom} n'a plus rien à jouer : motivation incertaine.")
-        ecart = max(abs(modeles["marche"][i] - p[i]) for i in ISSUES) if pm else 0
         desaccord = max(abs(modeles[a][i] - modeles[b][i]) for a in modeles for b in modeles for i in ISSUES)
-        if pm and max(abs(modeles["buts"][i] - pm[i]) for i in ISSUES) > 0.12:
-            pieges.append("Gros désaccord entre nos modèles et les bookmakers : ils savent peut-être quelque chose "
-                          "(blessure, rotation). Lis la presse avant de parier.")
+        ref = pin or pm
+        if ref and max(abs(modeles["buts"][i] - ref[i]) for i in ISSUES) > 0.15:
+            pieges.append("Gros écart entre les statistiques et le prix des bookmakers : ils savent sûrement quelque chose "
+                          "(blessure, rotation, changement d'entraîneur). Lis la presse avant de parier.")
         mv = mouvements(con, m["id"])
         for x in mv:
             if x["variation"] <= -config.BAISSE_ALERTE:
                 nb_alertes += 1
-        confiance = ("faible" if len(pieges) >= 2 or desaccord > 0.15 else
-                     "forte" if not pieges and desaccord < 0.08 and len(modeles) >= 3 else "moyenne")
-        M = ajuster_matrice(json.loads(preds["buts"]["matrice"]), p)
+        confiance = ("faible" if len(pieges) >= 2 or not (pin or pm) else
+                     "forte" if not pieges and pin and desaccord < 0.12 else "moyenne")
+        M = ajuster_matrice(json.loads(preds["buts"]["matrice"]), p, float(p_over))
         con.execute("INSERT OR REPLACE INTO verdicts VALUES (?,?,?,?,?,?,?,?,?,?)",
                     (m["id"], p["1"], p["N"], p["2"], float(p_over), json.dumps(modeles), json.dumps(pieges),
                      confiance, json.dumps([[round(float(v), 5) for v in l] for l in M]), maintenant()))
         nb += 1
     con.commit()
     log(f"  {nb} matchs jugés, {nb_alertes} alertes de cotes")
-    etat(con, "Juge", "ok" if nb else "inactif", f"{nb} matchs analysés par les 4 analystes")
+    nb_pin = con.execute("SELECT COUNT(*) FROM verdicts WHERE modeles LIKE '%pinnacle%' AND maj>=?",
+                         ((now - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ"),)).fetchone()[0]
+    etat(con, "Juge", "ok" if nb else "inactif", f"{nb} matchs avec un vrai prix ({nb_pin} grâce à Pinnacle)")
     etat(con, "Détecteur de pièges", "ok", "Promus, début de saison, fatigue, désaccords, matchs sans enjeu")
     etat(con, "Mouvements de cotes", "ok", f"{nb_alertes} chutes de cote repérées")

@@ -15,18 +15,18 @@ ORDRE_AGENTS = [
     ("Elo", "Note la force de chaque club, mise à jour après chaque match."),
     ("xG", "Mesure la qualité des occasions créées (5 grands championnats)."),
     ("Profil de jeu", "Tirs, corners, cartons et fautes de chaque équipe."),
-    ("Modèle buts", "Analyste n°1 : prédit le match à partir des buts marqués et encaissés."),
-    ("Modèle xG", "Analyste n°2 : prédit le match à partir de la qualité des occasions."),
+    ("Modèle buts", "Analyste : avis basé sur les buts marqués et encaissés (pour information)."),
+    ("Modèle xG", "Analyste : avis basé sur la qualité des occasions (pour information)."),
     ("Forme", "Résultats récents, séparés à domicile et à l'extérieur."),
     ("Fatigue", "Jours de repos, matchs enchaînés, Ligue des champions en semaine."),
     ("Enjeu", "Titre, Europe, maintien ou plus rien à jouer."),
     ("Mouvements de cotes", "Repère les cotes qui chutent : souvent une info qui circule."),
-    ("Juge", "Écoute les 4 analystes (buts, xG, Elo, bookmakers) et rend la probabilité finale."),
+    ("Juge", "Fixe le vrai prix de chaque pari grâce à Pinnacle, la référence des pros."),
     ("Détecteur de pièges", "Te prévient quand une analyse est fragile."),
-    ("Conseils", "Sélectionne les belles occasions du jour."),
+    ("Conseils", "Repère les bookmakers en retard sur Pinnacle : les belles occasions du jour."),
     ("Suivi", "Règle les paris test du robot (argent virtuel)."),
     ("Cote de clôture", "Vérifie si les conseils battent la dernière cote avant le match."),
-    ("Testeur", "Rejoue le système sur les 3 saisons passées avec les vraies cotes."),
+    ("Testeur", "Rejoue la méthode sur les 3 saisons passées avec les vraies cotes de l'époque."),
 ]
 
 

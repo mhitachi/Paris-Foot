@@ -9,7 +9,9 @@ import config
 from agents.base_donnees import etat, saison_en_cours
 
 NOM = "xG"
-ENTETES = {"User-Agent": "Mozilla/5.0", "X-Requested-With": "XMLHttpRequest"}
+ENTETES = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+                         "Chrome/124.0 Safari/537.36", "X-Requested-With": "XMLHttpRequest",
+           "Accept": "application/json, text/javascript, */*; q=0.01"}
 
 
 def recuperer(ligue, saison):
@@ -19,9 +21,11 @@ def recuperer(ligue, saison):
     if m:
         return json.loads(m.group(1).encode("utf-8").decode("unicode_escape"))
     # Méthode 2 : point d'accès de données
-    r = requests.get(f"https://understat.com/getLeagueData/{ligue}/{saison}", headers=ENTETES, timeout=30)
+    r = requests.get(f"https://understat.com/getLeagueData/{ligue}/{saison}", timeout=30,
+                     headers=ENTETES | {"Referer": f"https://understat.com/league/{ligue}/{saison}"})
     r.raise_for_status()
-    return r.json().get("dates", [])
+    data = r.json()
+    return data.get("dates", data.get("datesData", [])) if isinstance(data, dict) else data
 
 
 def executer(con, log):
@@ -45,5 +49,6 @@ def executer(con, log):
                 total += 1
     con.commit()
     log(f"  {total} matchs avec xG {erreurs or ''}")
-    etat(con, NOM, "ok" if total else "erreur",
-         f"{total} matchs avec xG" + (f" (problèmes : {', '.join(erreurs)})" if erreurs else ""))
+    # Le xG est un bonus (il ne fixe pas le prix) : s'il manque, on le met "en pause", pas "en panne".
+    etat(con, NOM, "ok" if total else "inactif",
+         f"{total} matchs avec xG" if total else "Source xG indisponible pour l'instant : l'analyse continue sans elle")

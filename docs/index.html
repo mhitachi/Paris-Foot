@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Paris Foot">
 <meta name="theme-color" content="#0c3a2a">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
 <title>Paris Foot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -165,7 +167,7 @@ function frequence(p) {
   const n = Math.round(p * 10);
   return n === 5 ? "environ 1 fois sur 2" : `environ ${n} fois sur 10`;
 }
-const coteMini = p => 1.05 / p;
+const coteMini = p => 1.03 / p;
 const libelleConseil = (m, c) => marches(m).find(x => x.k === c.issue)?.t || c.issue;
 
 // ---------- budget ----------
@@ -193,18 +195,18 @@ function verdict(m, mk, cote) {
   if (!cote || cote < 1.01) return null;
   const av = mk.p * cote - 1, b = budget();
   let cls, titre, txt, mise = 0;
-  if (av >= 0.05) {
-    mise = av >= .12 ? (m.confiance === "forte" ? 20 : 15) : av >= .08 ? 10 : 5;
+  if (av >= 0.03) {
+    mise = av >= .08 ? (m.confiance === "forte" ? 20 : 15) : av >= .05 ? 10 : 5;
     if (m.confiance === "faible") mise = Math.max(5, mise / 2);
     cls = "v-ok"; titre = "Bon pari";
-    txt = `Cette cote paie plus que le vrai risque. Avantage estimé : ${Math.round(av * 100)} %.`;
+    txt = `Jouez Sport paie plus que le vrai prix fixé par Pinnacle. Avantage : ${Math.round(av * 100)} %.`;
     if (m.confiance === "faible") { cls = "v-mid"; titre = "Bon prix, analyse fragile"; txt += " Mais l'analyse de ce match est fragile (voir « Attention » plus bas) : petite mise seulement."; }
   } else if (av >= 0) {
     cls = "v-mid"; titre = "Limite : passe ton tour";
-    txt = `La cote est à peu près juste (${Math.round(av * 100)} % d'avantage). Il te faudrait au moins ${fmt(coteMini(mk.p))}.`;
+    txt = `La cote est à peu près au vrai prix : pas assez d'avantage. Il te faudrait au moins ${fmt(coteMini(mk.p))}.`;
   } else {
     cls = "v-ko"; titre = "Mauvais prix";
-    txt = `Cette cote paie moins que le vrai risque. Pour que ça vaille le coup, il faudrait au moins ${fmt(coteMini(mk.p))}.`;
+    txt = `Jouez Sport paie moins que le vrai prix. Pour que ça vaille le coup, il faudrait au moins ${fmt(coteMini(mk.p))}.`;
   }
   if (mise) {
     if (b.reste <= 0) { mise = 0; txt += " Mais ta limite de pertes est atteinte : on attend."; }
@@ -255,7 +257,7 @@ function vueAccueil() {
   ${alertes.length ? "<h2>À regarder vite</h2>" + alertes.join("") : ""}
   <h2>Les belles occasions</h2>
   ${conseils.length ? conseils.map(carteConseil).join("") : `<div class="card empty">Aucune belle occasion pour l'instant.<br>Ne pas parier, c'est souvent la meilleure décision.</div>`}
-  <p class="mute small">Ces conseils sont le résultat de 17 agents. Une bonne occasion peut perdre : ce qui compte, c'est le bon prix, pari après pari (voir le Guide).</p>`;
+  <p class="mute small">Un conseil = un bookmaker qui paie plus que le vrai prix de Pinnacle. Vérifie toujours avec ta cote Jouez Sport. Une bonne occasion peut perdre : ce qui compte, c'est le bon prix, pari après pari (voir le Guide).</p>`;
 }
 
 // ---------- ÉCRAN : Matchs ----------
@@ -295,7 +297,8 @@ function ouvrirMatch(id, k) {
       ${e.absents?.length ? `<div>Absents : ${e.absents.map(esc).join(", ")}</div>` : "<div class='mute'>Aucun absent signalé</div>"}
       ${e.compo ? `<div class="small">Compo probable : ${esc(e.compo)}</div>` : ""}
       ${(e.infos || []).map(i => `<div class="small">• ${esc(i)}</div>`).join("")}</div>` : "";
-  const nomsModeles = {marche: "Les bookmakers", buts: "Modèle buts", xg: "Modèle occasions (xG)", elo: "Classement Elo"};
+  const nomsModeles = {pinnacle: "Pinnacle (le vrai prix)", marche: "Moyenne des bookmakers", buts: "Statistiques : buts", xg: "Statistiques : occasions (xG)", elo: "Classement Elo"};
+  const ordre = ["pinnacle", "marche", "buts", "xg", "elo"];
   $("#sheet").innerHTML = `<div class="sheet" role="dialog" aria-label="Fiche du match">
    <div class="head"><button id="fermer" aria-label="Retour">← Retour</button><span class="small">${esc(m.ligue_nom)} · ${quand(m.date)}</span></div>
    <main>
@@ -308,7 +311,7 @@ function ouvrirMatch(id, k) {
     </div>
 
     <div class="card" id="verif">
-      ${aide("Vérifier une cote Jouez Sport", "Choisis le pari que tu vois sur Jouez Sport, tape la cote affichée. L'appli compare avec la vraie probabilité calculée par les agents et te dit si le prix est bon.")}
+      ${aide("Vérifier une cote Jouez Sport", "Choisis le pari que tu vois sur Jouez Sport, tape la cote affichée. L'appli la compare au vrai prix fixé par Pinnacle et te dit si ça vaut le coup.")}
       <label for="mk">Le pari</label>
       <select id="mk">${groupes.map(g => `<optgroup label="${esc(g)}">${mks.filter(x => x.g === g).map(x =>
         `<option value="${x.k}" ${x.k === sel ? "selected" : ""}>${esc(x.t)} — ${pct(x.p)}</option>`).join("")}</optgroup>`).join("")}</select>
@@ -339,10 +342,10 @@ function ouvrirMatch(id, k) {
       ${L("Corners / match", pf(c.dom, "corners"), pf(c.ext, "corners"))}
       ${L("Cartons / match", pf(c.dom, "cartons"), pf(c.ext, "cartons"))}</table></div>
 
-    <div class="card">${aide("L'avis des 4 analystes", "Quatre analystes indépendants donnent leur avis. Le juge les mélange : les bookmakers comptent le plus (ils sont très bien informés), nos modèles servent à repérer leurs erreurs. Quand tout le monde est d'accord, l'analyse est solide.")}
+    <div class="card">${aide("Le prix et l'avis des analystes", "Le vrai prix vient de Pinnacle, le bookmaker le plus précis du monde (marge retirée). C'est lui qui décide si une cote est bonne. Les statistiques et le classement Elo sont là pour t'informer : quand ils sont très loin de Pinnacle, c'est souvent qu'une info (blessure, rotation) est déjà dans les cotes.")}
       <table style="margin-top:6px"><tr><th></th><th>${esc(m.dom)}</th><th>Nul</th><th>${esc(m.ext)}</th></tr>
-      ${Object.entries(m.modeles).map(([k, v]) => `<tr><td>${nomsModeles[k] || k}</td><td>${pct(v["1"])}</td><td>${pct(v.N)}</td><td>${pct(v["2"])}</td></tr>`).join("")}
-      <tr><td><b style="color:var(--ink)">Verdict du juge</b></td><td><b>${pct(m.proba["1"])}</b></td><td><b>${pct(m.proba.N)}</b></td><td><b>${pct(m.proba["2"])}</b></td></tr></table></div>
+      ${Object.entries(m.modeles).sort((a, b) => ordre.indexOf(a[0]) - ordre.indexOf(b[0])).map(([k, v]) => `<tr><td>${nomsModeles[k] || k}</td><td>${pct(v["1"])}</td><td>${pct(v.N)}</td><td>${pct(v["2"])}</td></tr>`).join("")}
+      <tr><td><b style="color:var(--ink)">Prix retenu</b></td><td><b>${pct(m.proba["1"])}</b></td><td><b>${pct(m.proba.N)}</b></td><td><b>${pct(m.proba["2"])}</b></td></tr></table></div>
 
     ${m.pieges.length ? `<div class="card">${aide("⚠️ Attention", "Le détecteur de pièges signale ce qui peut fausser l'analyse. Plus il y a de points ici, plus il faut miser petit, ou pas du tout.")}
       ${m.pieges.map(x => `<p style="margin:8px 0 0">• ${esc(x)}</p>`).join("")}</div>` : ""}
@@ -442,12 +445,12 @@ function vueGuide() {
   <details open><summary>1. À quoi sert cette appli ?</summary><p>Elle analyse chaque jour les matchs de 6 championnats (Premier League, Liga, Serie A, Bundesliga, Ligue 1, Eredivisie) grâce à 17 agents automatiques. Elle te dit quand une cote vaut vraiment le coup, et quand il vaut mieux passer.</p></details>
   <details><summary>2. Comment l'utiliser en 3 gestes</summary><ol><li>Ouvre l'onglet <b>Conseils</b> : ce sont les belles occasions du jour.</li><li>Ouvre Jouez Sport, trouve le même pari et regarde la cote.</li><li>Dans l'appli, tape « Vérifier ma cote », entre la cote de Jouez Sport. <b>Vert</b> = vas-y, <b>orange</b> = passe ton tour, <b>rouge</b> = mauvais prix. Si tu paries, tape « J'ai parié ».</li></ol></details>
   <details><summary>3. C'est quoi une cote ?</summary><p>C'est ce que le bookmaker te paie. Cote 2.00 : tu mises 10 CHF, tu récupères 20 CHF si tu gagnes (10 de mise + 10 de gain). Plus la cote est haute, plus le bookmaker pense que c'est improbable.</p></details>
-  <details><summary>4. Pourquoi l'appli parle de « bon prix » ?</summary><p>Les agents calculent la vraie chance de chaque résultat. Si un résultat arrive 1 fois sur 2, la cote juste est 2.00. Si Jouez Sport donne 2.30, il te paie trop : c'est un bon prix. S'il donne 1.80, il te paie trop peu : on passe.</p><p>L'appli demande toujours un peu plus que la cote juste (5 %), pour avoir une marge de sécurité.</p></details>
+  <details><summary>4. D'où vient le « vrai prix » ?</summary><p>De <b>Pinnacle</b>, le bookmaker le plus précis du monde : des parieurs professionnels y misent de grosses sommes, donc ses erreurs sont corrigées très vite. On retire sa petite marge et on obtient la vraie chance de chaque résultat. (Tu ne peux pas parier chez Pinnacle en Suisse : on se contente de lire ses cotes.)</p><p>Si un résultat arrive 1 fois sur 2, le vrai prix est 2.00. Si Jouez Sport donne 2.10 ou plus, il est en retard sur Pinnacle : c'est un bon prix. S'il donne 1.80, on passe. L'appli demande toujours au moins 3 % de plus que le vrai prix.</p><p>Pourquoi pas nos propres statistiques ? Le testeur a montré qu'elles ne battent pas Pinnacle. Elles restent affichées pour t'informer.</p></details>
   <details><summary>5. Tu peux perdre un bon pari, et c'est normal</summary><p>Pile ou face payé 2.20 au lieu de 2.00 : tu perds la moitié du temps, mais sur 100 lancers à 10 CHF, tu finis à +100 CHF. Un pari perdu ne veut pas dire que le conseil était mauvais. On juge le système sur 50 à 100 paris, jamais sur un week-end.</p></details>
   <details><summary>6. La cote de clôture</summary><p>C'est la dernière cote avant le coup d'envoi, quand toutes les infos sont connues. Si tu avais pris mieux, tu as acheté au bon prix. L'appli te le dit pour chaque pari dans « Mes paris ». La battre souvent, c'est le signe numéro un d'un parieur gagnant.</p></details>
   <details><summary>7. Les types de paris</summary><ul><li><b>Qui gagne ?</b> : victoire de l'un, de l'autre, ou nul.</li><li><b>Double chance</b> : tu gagnes avec 2 résultats sur 3 (ex : victoire ou nul). Cote plus basse, plus sûr.</li><li><b>Nombre de buts</b> : « +2.5 » = au moins 3 buts dans le match. « −2.5 » = 2 buts ou moins.</li><li><b>Les deux équipes marquent</b> : oui si chaque équipe marque au moins un but.</li><li><b>Handicap</b> : l'équipe doit gagner par 2 buts d'écart ou plus.</li></ul></details>
   <details><summary>8. Les règles d'or</summary><ul><li><b>Pas de combinés.</b> Chaque match ajouté multiplie la marge du bookmaker contre toi.</li><li><b>Mise conseillée : 5 à 20 CHF</b>, selon la qualité de l'occasion.</li><li><b>Confiance faible = petite mise ou rien.</b></li><li><b>Respecte ta limite.</b> Quand elle est atteinte, l'appli te dit d'attendre.</li><li><b>Ne parie jamais pour te refaire</b> après une défaite.</li></ul></details>
-  <details><summary>9. Que font les agents, et quand ?</summary><p>À 7h, les agents relèvent les matchs, les cotes, les notes Elo, les statistiques, puis le juge rend son verdict. À 9h, l'agent presse lit les journaux locaux pour les matchs du jour. À 17h, nouveau relevé des cotes pour repérer les mouvements. Le lundi, le testeur refait son examen. Tout se voit dans l'onglet <b>Agents</b>.</p></details>
+  <details><summary>9. Que font les agents, et quand ?</summary><p>À 7h, les agents relèvent les matchs, les cotes, les notes Elo, les statistiques, puis le juge fixe le vrai prix grâce à Pinnacle. À 9h, l'agent presse lit les journaux locaux pour les matchs du jour. À 17h, nouveau relevé des cotes pour repérer les mouvements. Le lundi, le testeur refait son examen. Tout se voit dans l'onglet <b>Agents</b>.</p></details>
   <details><summary>10. Installer l'appli sur l'écran d'accueil</summary><p><b>iPhone</b> : ouvre l'appli dans Safari, touche le bouton Partager, puis « Sur l'écran d'accueil ».<br><b>Android</b> : ouvre-la dans Chrome, menu ⋮, puis « Ajouter à l'écran d'accueil ».</p></details>
   <details><summary>11. Et si j'ai besoin d'aide ?</summary><p>Demande à Claude dans la conversation du projet « Paris foot ». Tu peux aussi lui demander une analyse détaillée d'un match précis.</p></details>
   </div>`;

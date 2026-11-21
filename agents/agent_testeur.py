@@ -1,6 +1,7 @@
 """AGENT Testeur — l'examen du système sur les 3 saisons passées, avec les vraies cotes de l'époque.
 Données : football-data.co.uk (gratuit). Tourne une fois par semaine (lundi).
-Simplification honnête : à l'époque on n'a ni xG ni Elo archivés -> le test utilise le modèle buts + le marché.
+Méthode testée : le vrai prix vient de Pinnacle ; on ne parie que quand Bet365 (bookmaker classique,
+proche de Jouez Sport) paie au moins 3 % de plus.
 Il mesure :
  - le rendement en pariant chez un bookmaker classique (Bet365, proche de ce que propose Jouez Sport),
  - le rendement avec la meilleure cote du marché,
@@ -50,37 +51,28 @@ def sans_marge(cotes):
 
 
 def backtest(historique, a_tester):
-    """historique : matchs déjà connus (avant la période) ; a_tester : matchs de la période, triés."""
+    """Méthode actuelle : vrai prix = Pinnacle sans marge. On parie chez un bookmaker classique (Bet365)
+    seulement quand il paie au moins 3 % de plus que ce vrai prix. (historique : inutilisé, gardé
+    pour compatibilité)."""
     paris = []
-    connus = list(historique)
-    mod, date_fit = None, None
     for m in a_tester:
-        if mod is None or (m["date"] - date_fit).days >= 28:
-            base = [(x["dom"], x["ext"], x["bd"], x["be"], x["date"]) for x in connus
-                    if (m["date"] - x["date"]).days <= 730]
-            if len(base) >= config.MIN_MATCHS_LIGUE:
-                mod, date_fit = ajuster(base, m["date"]), m["date"]
-        if mod and m["dom"] in mod["equipes"] and m["ext"] in mod["equipes"] and sum(
-                1 for x in connus if x["date"].year >= m["date"].year - 1 and m["dom"] in (x["dom"], x["ext"])) >= 8:
-            M, _, _ = matrice_scores(mod, m["dom"], m["ext"])
-            p = probas(M)
-            pm = sans_marge(m["marche"])
-            if pm:
-                juge = [POIDS_MARCHE * a + (1 - POIDS_MARCHE) * b for a, b in zip(pm, (p["p_dom"], p["p_nul"], p["p_ext"]))]
-                res = 0 if m["bd"] > m["be"] else 1 if m["bd"] == m["be"] else 2
-                options = [(i, juge[i], m["classique"][i], m["max"][i], m["cloture"][i], i == res) for i in range(3)]
-                pmo = sans_marge(m["ou_marche"])
-                if pmo:
-                    po = 0.5 * pmo[0] + 0.5 * p["p_over25"]
-                    plus = m["bd"] + m["be"] >= 3
-                    options += [("+", po, m["ou_classique"][0], None, m["ou_cloture"][0], plus),
-                                ("-", 1 - po, m["ou_classique"][1], None, m["ou_cloture"][1], not plus)]
-                choix = [o for o in options if o[2] and config.COTE_MIN <= o[2] <= config.COTE_MAX
-                         and o[1] * o[2] - 1 >= config.AVANTAGE_MIN]
-                if choix:
-                    o = max(choix, key=lambda o: o[1] * o[2])
-                    paris.append({"gagne": o[5], "cote": o[2], "max": o[3] or o[2], "cloture": o[4]})
-        connus.append(m)
+        options = []
+        pm = sans_marge(m["marche"])
+        if pm:
+            res = 0 if m["bd"] > m["be"] else 1 if m["bd"] == m["be"] else 2
+            pc = sans_marge(m["cloture"])
+            options += [(pm[i], m["classique"][i], m["max"][i], (1 / pc[i]) if pc else None, i == res) for i in range(3)]
+        pmo = sans_marge(m["ou_marche"])
+        if pmo:
+            plus = m["bd"] + m["be"] >= 3
+            pco = sans_marge(m["ou_cloture"])
+            options += [(pmo[0], m["ou_classique"][0], None, (1 / pco[0]) if pco else None, plus),
+                        (pmo[1], m["ou_classique"][1], None, (1 / pco[1]) if pco else None, not plus)]
+        choix = [o for o in options if o[1] and config.COTE_MIN <= o[1] <= config.COTE_MAX
+                 and o[0] * o[1] - 1 >= config.AVANTAGE_MIN]
+        if choix:
+            o = max(choix, key=lambda o: o[0] * o[1])
+            paris.append({"gagne": o[4], "cote": o[1], "max": o[2] or o[1], "cloture": o[3]})
     return paris
 
 
@@ -106,12 +98,15 @@ def verdict(r):
         return (f"Sur {r['nb']} paris, le système finit à peu près à l'équilibre ({roi:+.1%}). "
                 "C'est déjà mieux que la quasi-totalité des parieurs, qui perdent 5 à 10 %. Sois très sélectif.")
     return (f"Sur {r['nb']} paris, le système aurait perdu {abs(roi):.1%} chez un bookmaker classique. "
-            "Sur ces championnats, les cotes sont trop bien calculées : ne suis que les conseils avec la confiance « forte ».")
+            "Les bookmakers classiques sont rarement en retard sur Pinnacle dans ces championnats : "
+            "ne parie que sur les occasions très nettes, et compare toujours avec Jouez Sport.")
 
 
 def executer(con, log, forcer=False):
     der = memo_get(con, "testeur_date")
     now = datetime.now(timezone.utc)
+    if memo_get(con, "testeur_version") != 2:
+        forcer = True  # nouvelle méthode -> on refait l'examen tout de suite
     if not forcer and der and (now - datetime.fromisoformat(der)).days < 6 and now.weekday() != 0:
         log("  test déjà fait cette semaine")
         return
@@ -137,4 +132,5 @@ def executer(con, log, forcer=False):
                 "par_ligue": list(par_ligue.values()), "verdict": verdict(g)}
     memo_set(con, "testeur", resultat)
     memo_set(con, "testeur_date", now.isoformat())
+    memo_set(con, "testeur_version", 2)
     etat(con, NOM, "ok" if g.get("nb") else "erreur", resultat["verdict"])

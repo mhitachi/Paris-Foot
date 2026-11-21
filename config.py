@@ -23,15 +23,17 @@ FOOTBALL_DATA_KEY = os.getenv("FOOTBALL_DATA_KEY", "")
 ODDS_API_KEY      = os.getenv("ODDS_API_KEY", "")
 MODE              = os.getenv("MODE", "matin")      # "matin" ou "soir" (relevé de cotes du soir)
 
-# Poids du "juge" (comment on mélange les 4 analystes). Le marché pèse le plus :
-# les bookmakers sont très bien informés, nos modèles servent à repérer leurs erreurs.
+# Le VRAI PRIX vient de Pinnacle (cotes sans marge). Le testeur a montré que nos modèles
+# ne battent pas Pinnacle : ils restent affichés pour information, mais ne fixent plus le prix.
+# Ces poids ne servent qu'en secours, si Pinnacle et le marché sont absents.
 POIDS = {"marche": 0.45, "buts": 0.20, "xg": 0.20, "elo": 0.15}
+BOURSES = ("betfair_ex", "matchbook", "smarkets")  # bourses d'échange : pas des bookmakers classiques
 
 # Sélection des conseils
-AVANTAGE_MIN   = 0.03   # le juge doit voir au moins 3 % de plus que la meilleure cote du marché
+AVANTAGE_MIN   = 0.03   # un bookmaker doit payer au moins 3 % de plus que le vrai prix Pinnacle
 COTE_MIN, COTE_MAX = 1.50, 4.00
 MAX_CONSEILS_JOUR = 5
-MARGE_SECURITE = 0.05   # cote minimale demandée = 5 % au-dessus de la cote juste
+MARGE_SECURITE = 0.03   # cote minimale demandée = 3 % au-dessus du vrai prix
 MISE_ROBOT     = 10.0   # le robot teste ses conseils avec 10 CHF virtuels
 
 # Modèles
