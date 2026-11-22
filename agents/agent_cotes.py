@@ -57,7 +57,7 @@ def executer(con, log):
         if not a_venir:
             continue  # pas de match -> on économise les crédits
         r = requests.get(URL.format(sport=info["odds"]), timeout=30, params={
-            "apiKey": config.ODDS_API_KEY, "regions": "eu,uk", "markets": marches, "oddsFormat": "decimal"})
+            "apiKey": config.ODDS_API_KEY, "regions": "eu", "markets": marches, "oddsFormat": "decimal"})
         restant = r.headers.get("x-requests-remaining", restant)
         if r.status_code != 200:
             erreurs.append(f"{code}: {r.status_code}")
