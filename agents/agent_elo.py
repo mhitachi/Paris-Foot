@@ -29,6 +29,15 @@ def lire_csv(url):
 
 
 def executer(con, log):
+    try:
+        _executer(con, log)
+    except Exception as ex:
+        # L'Elo est une info en plus (il ne fixe pas le prix) : en cas de panne de ClubElo -> "en pause", pas "en panne".
+        log(f"  ClubElo indisponible : {type(ex).__name__}")
+        etat(con, NOM, "inactif", "ClubElo ne répond pas pour l'instant : nouvel essai demain matin")
+
+
+def _executer(con, log):
     now = datetime.now(timezone.utc)
     pays_vers_ligue = {i["pays"]: c for c, i in config.LIGUES.items()}
     # 1) notes

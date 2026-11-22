@@ -9,14 +9,16 @@ from agents.base_donnees import etat, maintenant
 
 
 def meilleures_cotes(con, match_id, marche):
-    """Meilleure cote par issue chez les bookmakers classiques (sans Pinnacle ni bourses d'échange)."""
-    best = {}
+    """Meilleure cote par issue chez les bookmakers classiques (sans Pinnacle ni bourses d'échange).
+    Il faut au moins 3 bookmakers sur le marché, sinon on ne renvoie rien (trop peu fiable)."""
+    best, bks = {}, set()
     for r in con.execute("SELECT bookmaker, issue, cote FROM cotes WHERE match_id=? AND marche=?", (match_id, marche)):
         if r["bookmaker"] == "pinnacle" or r["bookmaker"].startswith(config.BOURSES):
             continue
+        bks.add(r["bookmaker"])
         if r["cote"] > best.get(r["issue"], (0, ""))[0]:
             best[r["issue"]] = (r["cote"], r["bookmaker"])
-    return best
+    return best if len(bks) >= 3 else {}
 
 
 def opportunites(con, v):
@@ -37,8 +39,9 @@ def conseil(con, v):
     # pas de conseil sans le prix de Pinnacle (la référence), ni si l'analyse est fragile
     if v["confiance"] == "faible" or "pinnacle" not in (v["modeles"] or ""):
         return None
+    # au-delà de 15 % d'avantage, c'est presque toujours une erreur de cote chez le bookmaker -> ignoré
     ops = [o for o in opportunites(con, v)
-           if o["avantage"] >= config.AVANTAGE_MIN and config.COTE_MIN <= o["cote"] <= config.COTE_MAX]
+           if config.AVANTAGE_MIN <= o["avantage"] <= 0.15 and config.COTE_MIN <= o["cote"] <= config.COTE_MAX]
     return max(ops, key=lambda o: o["avantage"]) if ops else None
 
 

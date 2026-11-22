@@ -90,22 +90,23 @@ def resumer(paris):
 def verdict(r):
     if not r.get("nb"):
         return "Pas assez de données pour juger."
-    roi = r["roi"]
-    if roi >= 0.02:
-        return (f"Sur {r['nb']} paris, le système aurait gagné {roi:+.1%} de ce qui a été misé chez un bookmaker classique. "
-                "Encourageant, mais le passé ne garantit pas l'avenir : commence petit.")
-    if roi >= -0.02:
-        return (f"Sur {r['nb']} paris, le système finit à peu près à l'équilibre ({roi:+.1%}). "
-                "C'est déjà mieux que la quasi-totalité des parieurs, qui perdent 5 à 10 %. Sois très sélectif.")
-    return (f"Sur {r['nb']} paris, le système aurait perdu {abs(roi):.1%} chez un bookmaker classique. "
-            "Les bookmakers classiques sont rarement en retard sur Pinnacle dans ces championnats : "
-            "ne parie que sur les occasions très nettes, et compare toujours avec Jouez Sport.")
+    roi, n, clv = r["roi"], r["nb"], r.get("clv_battu")
+    txt = f"Sur {n} paris en 3 saisons, le résultat est de {roi:+.1%}. "
+    if n < 200:
+        txt += "C'est trop peu de paris pour juger sur le résultat : le hasard pèse encore énormément. "
+    if clv is not None:
+        if clv >= 0.6:
+            txt += (f"Le bon signe : ces paris ont battu la cote de clôture de Pinnacle {clv:.0%} du temps. "
+                    "C'est le meilleur indicateur des parieurs gagnants sur la durée.")
+        else:
+            txt += f"Cote de clôture battue seulement {clv:.0%} du temps : la méthode ne trouve pas assez de bons prix."
+    return txt
 
 
 def executer(con, log, forcer=False):
     der = memo_get(con, "testeur_date")
     now = datetime.now(timezone.utc)
-    if memo_get(con, "testeur_version") != 2:
+    if memo_get(con, "testeur_version") != 3:
         forcer = True  # nouvelle méthode -> on refait l'examen tout de suite
     if not forcer and der and (now - datetime.fromisoformat(der)).days < 6 and now.weekday() != 0:
         log("  test déjà fait cette semaine")
@@ -132,5 +133,5 @@ def executer(con, log, forcer=False):
                 "par_ligue": list(par_ligue.values()), "verdict": verdict(g)}
     memo_set(con, "testeur", resultat)
     memo_set(con, "testeur_date", now.isoformat())
-    memo_set(con, "testeur_version", 2)
+    memo_set(con, "testeur_version", 3)
     etat(con, NOM, "ok" if g.get("nb") else "erreur", resultat["verdict"])
