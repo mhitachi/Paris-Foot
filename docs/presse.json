@@ -1,0 +1,91 @@
+{
+ "matchs": {
+  "558522": {
+   "resume": "Bologna a un nouvel entraîneur efficace (Palladino) et reçoit la dernière de la Serie A, Udinese, qui vient aussi de changer de coach. Plusieurs absents côté Bologna.",
+   "alerte": null,
+   "dom": {
+    "absents": [
+     "Miranda (blessé)",
+     "Heggem (non convoqué, raison non précisée)",
+     "El Azzouzi (adducteur, environ 2 semaines)",
+     "Cambiaghi (incertain)"
+    ],
+    "compo": "3-4-3 probable : Skorupski ; Darmian, Casale, Theate ; Zortea, Ferguson, Pobega, Alhassane ; Orsolini, Odgaard, Bernardeschi",
+    "infos": [
+     "Tedesco limogé après 1 point en 4 matchs ; Palladino a relancé l équipe"
+    ]
+   },
+   "ext": {
+    "absents": [
+     "Davis (à évaluer, mais annoncé titulaire)",
+     "Zaniolo (à évaluer)"
+    ],
+    "compo": "3-5-2 probable : Okoye ; Abankwah, Palma, Solet ; Vojvoda, Piotrowski, Karlstrom, Ekkelenkamp, Kamara ; Zaniolo, Davis",
+    "infos": [
+     "Dernière place, 5 points en 11 matchs",
+     "Runjaic limogé après 2-5 contre la Roma, Zanetti le remplace",
+     "Zanoli de retour"
+    ]
+   },
+   "arbitre": null,
+   "lu_le": "2026-11-22"
+  },
+  "558524": {
+   "resume": "Sassuolo (17e) a pris 1 point en deux mois et a changé d entraîneur (D Aversa). Genoa (13e) va mieux avec De Rossi : 4 victoires sur 6.",
+   "alerte": null,
+   "dom": {
+    "absents": [
+     "Adzic (out)",
+     "Volpato (out, selon un titre de presse)"
+    ],
+    "compo": "4-3-3 probable : Muric ou Turati ; Walukiewicz, Idzes, Caleta-Car, Doig ; Thorstvedt, Matic, Bakola ; Berardi (incertain/récupéré selon les sources), Esposito, Laurienté",
+    "infos": [
+     "8 points en 11 matchs, 1 seul point en deux mois",
+     "Aquilani remplacé par D Aversa"
+    ]
+   },
+   "ext": {
+    "absents": [
+     "Frendrup (à évaluer)",
+     "Colombo (probablement sur le banc)"
+    ],
+    "compo": "3-4-2-1 probable : Bijlow ; Marcandalli, Ostigard, Vasquez ; Ehizibue, Traoré, Frendrup, Ellertsson ; El Shaarawy, Messias ; Osmajic",
+    "infos": [
+     "13 points, à +6 de la zone rouge",
+     "4 victoires et 2 défaites sur les 6 derniers matchs"
+    ]
+   },
+   "arbitre": null,
+   "lu_le": "2026-11-22"
+  },
+  "559625": {
+   "resume": "Paris FC perd Ikoné et Sangui (cuisse). Angers est privé de Lefort (suspendu) et Diatta (cheville).",
+   "alerte": null,
+   "dom": {
+    "absents": [
+     "Ikoné (cuisse, fin novembre)",
+     "Sangui (cuisse, fin novembre)"
+    ],
+    "compo": "",
+    "infos": [
+     "Face-à-face récents : 1 victoire Paris FC, 2 Angers, 1 nul"
+    ]
+   },
+   "ext": {
+    "absents": [
+     "Lefort (suspendu)",
+     "Diatta (cheville, début décembre)",
+     "El Ouazzani (aine, incertain)"
+    ],
+    "compo": "",
+    "infos": []
+   },
+   "arbitre": {
+    "nom": "Aurélien Petit",
+    "profil": null
+   },
+   "lu_le": "2026-11-22"
+  }
+ },
+ "maj": "2026-11-22T11:13:35Z"
+}
