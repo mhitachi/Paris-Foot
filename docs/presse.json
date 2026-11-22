@@ -85,7 +85,23 @@
     "profil": null
    },
    "lu_le": "2026-11-22"
+  },
+  "559626": {
+   "resume": "Aucune info fiable et récente trouvée dans la presse pour ce match. Pas de composition ni d'absents confirmés.",
+   "alerte": null,
+   "dom": {
+    "absents": [],
+    "compo": "",
+    "infos": []
+   },
+   "ext": {
+    "absents": [],
+    "compo": "",
+    "infos": []
+   },
+   "arbitre": null,
+   "lu_le": "2026-11-22"
   }
  },
- "maj": "2026-11-22T11:13:35Z"
+ "maj": "2026-11-22T14:12:47Z"
 }
